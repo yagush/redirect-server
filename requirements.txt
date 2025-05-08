@@ -3,3 +3,5 @@ uvicorn
 pandas
 gspread
 google-auth
+oauth2client
+python-dotenv
