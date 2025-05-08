@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from datetime import datetime
+import pytz  # ✅ добавлено
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -20,7 +21,10 @@ sheet = gs_client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
 async def track_click(id: str = "", type: str = "", request: Request = None):
     ip = request.client.host
     user_agent = request.headers.get("user-agent", "")
-    timestamp = datetime.utcnow().isoformat()
+
+    # ✅ Локальное аргентинское время
+    argentina_tz = pytz.timezone("America/Argentina/Buenos_Aires")
+    timestamp = datetime.now(argentina_tz).strftime("%d.%m.%Y %H:%M:%S")
 
     # 🔹 Запись строки в таблицу
     sheet.append_row([
@@ -35,9 +39,8 @@ async def track_click(id: str = "", type: str = "", request: Request = None):
     if type == "map":
         return RedirectResponse(f"https://www.google.com/maps/search/?api=1&query={id}")
     elif type == "photos":
-        return RedirectResponse(id)  # id — это уже Google Drive ссылка
+        return RedirectResponse(id)
     elif type == "contact":
         return RedirectResponse(id if id.startswith("http") else "https://t.me/Oleg_apt_BA")
 
-    # 🔁 Запасной редирект
     return RedirectResponse("https://google.com")
