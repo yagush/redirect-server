@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from datetime import datetime
-import pytz  # ✅ добавлено
+import pytz
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -14,20 +14,23 @@ gs_client = gspread.authorize(creds)
 
 # === Конфигурация Google Таблицы ===
 SPREADSHEET_ID = "1EZuVAZPEWcTNsGWV2pN2I5YiXWaNb08non20fO2ST_0"
-SHEET_NAME = "Sheet_1"
-sheet = gs_client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
 
 @app.get("/track")
-async def track_click(id: str = "", type: str = "", request: Request = None):
+async def track_click(id: str = "", type: str = "", sheet: str = "Sheet_1", request: Request = None):
     ip = request.client.host
     user_agent = request.headers.get("user-agent", "")
 
-    # ✅ Локальное аргентинское время
+    # Текущее время в Аргентине
     argentina_tz = pytz.timezone("America/Argentina/Buenos_Aires")
-    timestamp = datetime.now(argentina_tz).strftime("%d.%m.%Y %H:%M:%S")
+    timestamp = datetime.now(argentina_tz).strftime("%Y-%m-%d %H:%M:%S")
+
+    try:
+        worksheet = gs_client.open_by_key(SPREADSHEET_ID).worksheet(sheet)
+    except Exception as e:
+        return {"error": f"Ошибка при доступе к листу '{sheet}': {str(e)}"}
 
     # 🔹 Запись строки в таблицу
-    sheet.append_row([
+    worksheet.append_row([
         timestamp,
         ip,
         type,
@@ -43,4 +46,5 @@ async def track_click(id: str = "", type: str = "", request: Request = None):
     elif type == "contact":
         return RedirectResponse(id if id.startswith("http") else "https://t.me/Oleg_apt_BA")
 
+    # 🔁 Запасной редирект
     return RedirectResponse("https://google.com")
